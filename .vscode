@@ -1,0 +1,38 @@
+{
+  "liveServer.settings.host": "0.0.0.0",
+  "liveServer.settings.port": 5500
+}
+```
+- Save the file, then **stop and restart Live Server**
+
+---
+
+## Step 3 — Open on Your Mobile
+
+- Make sure your **phone is connected to the same WiFi** as your laptop
+- Open any browser on your phone (Chrome recommended)
+- Type in the address bar:
+```
+http://192.168.1.5:5500/index.html
+```
+*(replace `192.168.1.5` with your actual IP from Step 1)*
+
+---
+
+## Step 4 — Add Firebase Authorization
+
+Since you're now accessing from a new IP, add it to Firebase too:
+- Go to Firebase Console → **Authentication → Settings → Authorized domains**
+- Click **Add domain** and add your laptop IP:
+```
+192.168.1.5
+```
+*(use your actual IP)*
+
+---
+
+## Summary
+```
+Laptop IP:  192.168.1.5  (find yours via ipconfig)
+Phone URL:  http://192.168.1.5:5500/index.html
+Condition:  Both on same WiFi ✅

@@ -1,0 +1,12 @@
+{
+  "name": "alumni-connect",
+  "version": "1.0.0",
+  "description": "Alumni Connect Web Application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <title>Mentor Mesh — Smart Alumni Mentorship Platform</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+</head>
+
+<body>
+
+  <div id="loginPage" style="display:none">
+    <div class="login-logo">
+      <h1>Mentor<span>Mesh</span></h1>
+      <p>🎓 Smart Alumni Mentorship Platform · TCE Gadag</p>
+    </div>
+    <div class="login-card">
+      <div class="role-toggle">
+        <button class="role-btn active" data-role="student" onclick="AUTH.switchRole(this)">Student / Alumni</button>
+        <button class="role-btn" data-role="admin" onclick="AUTH.switchRole(this)">Coordinator</button>
+      </div>
+      <div class="field">
+        <label>Email or USN</label>
+        <input id="loginEmail" type="text" placeholder="your@email.com or 2TG21CS001"
+          onkeydown="if(event.key==='Enter') AUTH.login()" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="loginPassword" type="password" placeholder="Enter password"
+          onkeydown="if(event.key==='Enter') AUTH.login()" />
+      </div>
+      <div class="error-msg" id="loginError"></div>
+      <button class="btn-primary" id="loginBtn" onclick="AUTH.login()">Sign In</button>
+      <button class="btn-secondary" onclick="AUTH.showRegister()">New student? Create account →</button>
+      <div style="text-align:center;margin-top:14px">
+        <span style="font-size:13px;color:var(--muted);cursor:pointer" onclick="AUTH.showForgot()">
+          Forgot password? <span style="color:var(--accent2)">Reset via email →</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div id="registerPage" style="display:none">
+    <div class="page-header">
+      <div class="back-btn" onclick="AUTH.showLogin()">←</div>
+      <h2>Create Account</h2>
+    </div>
+    <div style="padding:0 4px">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        Select your account type and fill in your details.
+      </p>
+
+      <!-- Account Type Toggle -->
+      <div class="role-toggle" style="margin-bottom:22px">
+        <button class="role-btn active" id="regTypeStudent" onclick="AUTH.switchRegType('student', this)">🎓
+          Student</button>
+        <button class="role-btn" id="regTypeAlumni" onclick="AUTH.switchRegType('alumni', this)">👔 Alumni</button>
+      </div>
+
+      <div class="field"><label>Full Name *</label>
+        <input id="regName" placeholder="e.g. Priya Sharma" />
+      </div>
+      <div class="field">
+        <label>USN / Roll Number *</label>
+        <input id="regUSN" placeholder="e.g. 2TG21CS001" style="text-transform:uppercase"
+          oninput="AUTH.validateUSN(this)" />
+        <div id="usnHint" style="font-size:12px;margin-top:6px;color:var(--muted)">
+          Must start with <strong style="color:var(--accent2)">2TG</strong>
+          followed by year + branch + roll number (e.g. 2TG21CS001)
+        </div>
+      </div>
+      <div class="field"><label>Branch *</label>
+        <select id="regBranch">
+          <option value="">Select Branch</option>
+          <option>CSE</option>
+          <option>ECE</option>
+          <option>ME</option>
+          <option>Civil</option>
+          <option>EEE</option>
+          <option>IT</option>
+          <option>Chemical</option>
+          <option>Biotech</option>
+        </select>
+      </div>
+
+      <!-- Year of Passing — Alumni only -->
+      <div class="field" id="regYearField" style="display:none">
+        <label>Year of Passing * <span style="color:var(--accent2);font-size:10px;">(Alumni required)</span></label>
+        <select id="regYear">
+          <option value="">Select Year</option>
+        </select>
+      </div>
+
+      <!-- LinkedIn — Alumni only -->
+      <div class="field" id="regLinkedinField" style="display:none">
+        <label>LinkedIn Profile URL * <span style="color:var(--accent2);font-size:10px;">(Alumni
+            required)</span></label>
+        <input id="regLinkedin" type="url" placeholder="https://linkedin.com/in/your-profile" />
+      </div>
+
+      <!-- GitHub — Alumni only -->
+      <div class="field" id="regGithubField" style="display:none">
+        <label>GitHub Profile URL * <span style="color:var(--accent2);font-size:10px;">(Alumni required)</span></label>
+        <input id="regGithub" type="url" placeholder="https://github.com/your-username" />
+      </div>
+
+      <!-- Career Details — Alumni only -->
+      <div id="regCareerSection" style="display:none">
+        <div class="form-group-title" style="margin-top:8px">Career Details <span
+            style="color:var(--accent2);font-size:10px;text-transform:none;letter-spacing:0;">(Alumni)</span></div>
+        <div class="field"><label>Current Status</label>
+          <select id="regStatus">
+            <option value="">Select Status</option>
+            <option>Employed</option>
+            <option>Studying</option>
+            <option>Entrepreneur</option>
+            <option>Freelancer</option>
+          </select>
+        </div>
+        <div class="field"><label>Company / University</label>
+          <input id="regCompany" placeholder="e.g. Infosys / IIT Delhi" />
+        </div>
+        <div class="field"><label>Job Title / Course</label>
+          <input id="regRole" placeholder="e.g. Software Engineer / M.Tech" />
+        </div>
+        <div class="field"><label>City</label>
+          <input id="regCity" placeholder="e.g. Bengaluru" />
+        </div>
+        <div class="field"><label>Short Bio</label>
+          <textarea id="regBio" placeholder="A brief note about yourself…"></textarea>
+        </div>
+      </div>
+
+      <div class="field"><label>Email Address *</label>
+        <input id="regEmail" type="email" placeholder="your@email.com" />
+      </div>
+      <div class="field"><label>Phone Number</label>
+        <input id="regPhone" type="tel" placeholder="+91 9876543210" />
+      </div>
+      <div class="field"><label>Password * (min 6 characters)</label>
+        <input id="regPassword" type="password" placeholder="Create a password" />
+      </div>
+      <div class="field"><label>Confirm Password *</label>
+        <input id="regConfirm" type="password" placeholder="Re-enter password" />
+      </div>
+      <div class="error-msg" id="registerError"></div>
+      <button class="btn-primary" id="registerBtn" onclick="AUTH.register()">Create Account</button>
+    </div>
+  </div>
+
+  <div id="forgotPage" style="display:none">
+    <div class="page-header">
+      <div class="back-btn" onclick="AUTH.showLogin()">←</div>
+      <h2>Reset Password</h2>
+    </div>
+    <div style="padding:0 4px">
+      <div id="forgotStep1">
+        <div
+          style="background:rgba(124,106,247,0.08);border:1px solid rgba(124,106,247,0.2);border-radius:12px;padding:16px;margin-bottom:24px">
+          <p style="font-size:13px;color:var(--accent2);font-weight:600;margin-bottom:6px">📧 How it works</p>
+          <p style="font-size:13px;color:var(--muted);line-height:1.6">
+            Enter your registered email. We will send you a
+            <strong style="color:var(--text)">password reset link</strong>.
+            Click it to set a new password — no OTP to remember!
+          </p>
+        </div>
+        <div class="field">
+          <label>Registered Email Address *</label>
+          <input id="forgotEmail" type="email" placeholder="your@email.com"
+            onkeydown="if(event.key==='Enter') AUTH.sendResetEmail()" />
+        </div>
+        <div class="error-msg" id="forgotError"></div>
+        <button class="btn-primary" id="forgotBtn" onclick="AUTH.sendResetEmail()">Send Reset Link</button>
+        <button class="btn-secondary" onclick="AUTH.showLogin()">Back to Sign In</button>
+      </div>
+
+      <div id="forgotStep2" style="display:none;text-align:center;padding:20px 0">
+        <div style="font-size:52px;margin-bottom:20px">📬</div>
+        <h3 style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:12px">Check your inbox!</h3>
+        <p style="font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:8px">
+          A password reset link has been sent to
+        </p>
+        <p id="forgotSentTo" style="font-size:14px;font-weight:600;color:var(--accent2);margin-bottom:24px"></p>
+        <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:28px">
+          Click the link in the email to set a new password.
+          Check your spam folder if you don't see it within a minute.
+        </p>
+        <button class="btn-primary" onclick="AUTH.showLogin()">Back to Sign In</button>
+        <button class="btn-secondary" onclick="AUTH.resendReset()">Resend Email</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mainApp">
+    <div class="app-shell">
+
+      <div class="top-bar">
+        <div class="logo">Mentor<span>Mesh</span></div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="user-chip" onclick="UI.showPage('profile')">
+            <div class="uavatar" id="userInitials">?</div>
+            <span id="userName">User</span>
+            <span class="role-label" id="userRoleLabel">Student</span>
+          </div>
+          <button id="topSettingsBtn" class="settings-nav-btn" onclick="SETTINGS.toggleSettingsMenu()"
+            title="Settings & Support">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+
+      <div id="toast" class="toast"></div>
+
+      <div class="page active" id="page-home">
+        <div class="search-bar">
+          <span style="color:var(--muted)">🔍</span>
+          <input id="searchInput" type="text" placeholder="Search by name, branch, company…"
+            oninput="UI.renderList()" />
+        </div>
+        <div class="tabs">
+          <div class="tab active" onclick="UI.filterByBranch('All',this)">All</div>
+          <div class="tab" onclick="UI.filterByBranch('CSE',this)">CSE</div>
+          <div class="tab" onclick="UI.filterByBranch('ECE',this)">ECE</div>
+          <div class="tab" onclick="UI.filterByBranch('ME',this)">Mech</div>
+          <div class="tab" onclick="UI.filterByBranch('Civil',this)">Civil</div>
+          <div class="tab" onclick="UI.filterByBranch('EEE',this)">EEE</div>
+          <div class="tab" onclick="UI.filterByBranch('IT',this)">IT</div>
+        </div>
+        <div class="year-filter" id="yearFilter"></div>
+        <div id="alumniList">
+          <div class="empty">
+            <div class="icon">⏳</div>
+            <p>Loading alumni…</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-events">
+        <div class="hero-banner">
+          <h2>College <span>Events</span> Notice</h2>
+          <p>Official notices, upcoming seminars, and alumni meetups</p>
+        </div>
+
+        <div id="eventsTimeline"></div>
+
+        <button id="adminCreateEventBtn" class="btn-primary"
+          style="position:fixed; bottom:85px; right:20px; width:56px; height:56px; border-radius:50%; font-size:24px; display:none; padding:0; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(124,106,247,0.4); z-index:99;"
+          onclick="EVENTS.openCreateModal()">+</button>
+      </div>
+
+      <div class="page" id="page-opps">
+        <div class="hero-banner">
+          <h2>Opportunities <span>Hub</span></h2>
+          <p>Exclusive internships, jobs & placement opportunities</p>
+        </div>
+
+        <!-- ALUMNI REFERRAL BANNER (VISIBLE ONLY TO ALUMNI) -->
+        <div id="alumniShareBanner" class="alumni-coordinator-card" style="display:none;">
+          <div class="info">
+            <h3>💼 Share Job / Internship Referral</h3>
+            <p>Help your juniors! Share hiring opportunities from your company directly with the College Placement Coordinator.</p>
+          </div>
+          <button class="action-btn" onclick="OPPORTUNITIES.openAlumniShareModal()">
+            🚀 Share Vacancy
+          </button>
+        </div>
+
+        <div class="search-bar">
+          <span style="color:var(--muted)">🔍</span>
+          <input id="oppSearchInput" type="text" placeholder="Search by role, company, skills, or city…"
+            oninput="OPPORTUNITIES.onSearch(this.value)" />
+        </div>
+
+        <div class="tabs" id="oppsTabs">
+          <div class="tab active" onclick="OPPORTUNITIES.setTab('All', this)">All</div>
+          <div class="tab" onclick="OPPORTUNITIES.setTab('Internship', this)">Internships 🎓</div>
+          <div class="tab" onclick="OPPORTUNITIES.setTab('Job', this)">Job Vacancies 💼</div>
+          <div class="tab" id="adminReferralsTab" style="display:none;" onclick="OPPORTUNITIES.setTab('Referrals', this)">
+            📥 Alumni Referrals <span id="oppsReferralBadge" style="display:none; background:var(--gold); color:#111; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:4px; font-weight:700;">0</span>
+          </div>
+          <div class="tab" id="myReferralsTab" style="display:none;" onclick="OPPORTUNITIES.setTab('MyReferrals', this)">
+            ⭐ My Shared Leads
+          </div>
+        </div>
+
+        <div id="oppsList">
+          <div class="empty">
+            <div class="icon">⏳</div>
+            <p>Loading opportunities…</p>
+          </div>
+        </div>
+
+        <button id="adminCreateOppBtn" class="btn-primary"
+          style="position:fixed; bottom:85px; right:20px; width:56px; height:56px; border-radius:50%; font-size:24px; display:none; padding:0; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(124,106,247,0.4); z-index:99;"
+          onclick="OPPORTUNITIES.openCreateModal()" title="Post Opportunity">+</button>
+        
+        <button id="alumniShareOppBtn" class="btn-primary"
+          style="position:fixed; bottom:85px; right:20px; width:56px; height:56px; border-radius:50%; font-size:22px; display:none; padding:0; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(52,211,153,0.4); background:var(--green); z-index:99;"
+          onclick="OPPORTUNITIES.openAlumniShareModal()" title="Share Vacancy with Coordinator">💼</button>
+      </div>
+
+      <div class="page" id="page-inbox">
+        <div class="hero-banner">
+          <h2>Messages <span>Inbox</span></h2>
+          <p>Direct communication across students, alumni & coordinators</p>
+        </div>
+
+        <!-- ALUMNI DIRECT COORDINATOR BANNER (VISIBLE ONLY TO ALUMNI) -->
+        <div id="alumniCoordinatorChatBanner" class="alumni-coordinator-card" style="display:none; margin-bottom:12px;">
+          <div class="info">
+            <h3>👑 College Placement Coordinator</h3>
+            <p>Direct channel for Alumni to share job vacancies, internship referrals & institutional notices with Admin.</p>
+          </div>
+          <button class="action-btn" style="background:var(--gold); color:#111;" onclick="CHAT.openCoordinatorChat()">
+            💬 Message Admin
+          </button>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
+          <div class="search-bar" style="flex:1; margin-bottom:0;">
+            <span style="color:var(--muted)">🔍</span>
+            <input id="inboxSearchInput" type="text" placeholder="Search conversations…"
+              oninput="CHAT.onInboxSearch(this.value)" />
+          </div>
+          <button class="btn-primary"
+            style="width:auto; padding:12px 18px; margin:0; white-space:nowrap; font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px; border-radius:var(--radius-xs);"
+            onclick="CHAT.openNewChatModal()">
+            ✍️ New Chat
+          </button>
+        </div>
+
+        <div id="inboxList" style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="empty">
+            <div class="icon">⏳</div>
+            <p>Loading conversations...</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-stats">
+        <div class="hero-banner">
+          <h2>Alumni <span>Insights</span></h2>
+          <p>Real-time overview of our college alumni network</p>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="section-title">Branch Breakdown</div>
+        <div id="branchBreakdown"></div>
+        <div class="section-title">Year-wise Passouts</div>
+        <div id="yearBreakdown"></div>
+      </div>
+
+      <div class="page" id="page-add">
+        <div class="form-section">
+          <h2>Add Alumni ✦</h2>
+          <p class="subtitle">Manually add a passed-out student to the directory.</p>
+
+          <div class="form-group-title">Academic Details</div>
+          <div class="field"><label>Full Name *</label>
+            <input id="f_name" placeholder="e.g. Rahul Kumar" />
+          </div>
+          <div class="field"><label>USN / Roll No *</label>
+            <input id="f_usn" placeholder="e.g. 2TG21CS001" style="text-transform:uppercase"
+              oninput="AUTH.validateUSN(this)" />
+            <div id="f_usnHint" style="font-size:12px;margin-top:6px;color:var(--muted)">
+              Must start with <strong style="color:var(--accent2)">2TG</strong>
+            </div>
+          </div>
+          <div class="field"><label>Branch *</label>
+            <select id="f_branch">
+              <option value="">Select Branch</option>
+              <option>CSE</option>
+              <option>ECE</option>
+              <option>ME</option>
+              <option>Civil</option>
+              <option>EEE</option>
+              <option>IT</option>
+              <option>Chemical</option>
+              <option>Biotech</option>
+            </select>
+          </div>
+
+          <div class="field"><label>Year of Passing *</label>
+            <select id="f_year">
+              <option value="">Select Year</option>
+            </select>
+          </div>
+
+          <div class="field"><label>CGPA</label>
+            <input id="f_cgpa" type="number" step="0.01" min="0" max="10" placeholder="e.g. 8.7" />
+          </div>
+
+          <div class="form-group-title">Career Details</div>
+          <div class="field"><label>Current Status</label>
+            <select id="f_status">
+              <option value="">Select Status</option>
+              <option>Employed</option>
+              <option>Studying</option>
+              <option>Entrepreneur</option>
+              <option>Freelancer</option>
+            </select>
+          </div>
+          <div class="field"><label>Company / University</label>
+            <input id="f_company" placeholder="e.g. Infosys / IIT Delhi" />
+          </div>
+          <div class="field"><label>Job Title / Course</label>
+            <input id="f_role" placeholder="e.g. Software Engineer / M.Tech" />
+          </div>
+          <div class="field"><label>City</label>
+            <input id="f_city" placeholder="e.g. Bengaluru" />
+          </div>
+
+          <div class="form-group-title">Contact Details</div>
+          <div class="field"><label>LinkedIn Profile URL</label>
+            <input id="f_linkedin" placeholder="https://linkedin.com/in/…" />
+          </div>
+          <div class="field"><label>GitHub Profile URL</label>
+            <input id="f_github" placeholder="https://github.com/…" />
+          </div>
+          <div class="field"><label>Email</label>
+            <input id="f_email" type="email" placeholder="alumni@email.com" />
+          </div>
+          <div class="field"><label>Phone</label>
+            <input id="f_phone" placeholder="+91 9999999999" />
+          </div>
+          <div class="field"><label>Short Bio</label>
+            <textarea id="f_bio" placeholder="A brief note about this alumni…"></textarea>
+          </div>
+          <button class="btn-primary" id="addAlumniBtn" onclick="APP.addAlumni()">+ Add to Directory</button>
+        </div>
+      </div>
+
+      <div class="page" id="page-profile">
+        <div class="profile-header" id="profileHeader">
+          <div class="profile-avatar">?</div>
+        </div>
+        <div id="profileBody"></div>
+        <div style="padding:0 20px 10px">
+          <button class="btn-danger" onclick="AUTH.logout()">↩ Sign Out</button>
+        </div>
+      </div>
+
+      <!-- SETTINGS & HELP CENTER PAGE -->
+      <div class="page" id="page-settings">
+        <div class="hero-banner">
+          <h2>Settings & <span>Support</span></h2>
+          <p>Manage security, preferences, notifications & get in touch with help center</p>
+        </div>
+
+        <!-- SECTION: SECURITY & PASSWORD -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <div class="settings-icon" style="background:rgba(124,106,247,0.15); color:var(--accent);">🔐</div>
+            <div>
+              <h3>Security & Account</h3>
+              <p>Account verification, password security & recovery</p>
+            </div>
+          </div>
+
+          <div class="settings-row" style="cursor:pointer;" onclick="SETTINGS.openChangePasswordModal()">
+            <div class="settings-label">
+              <strong>Change Account Password</strong>
+              <span>Send a secure password update link to your registered email</span>
+            </div>
+            <span style="color:var(--accent2); font-size:14px;">🔑 Update →</span>
+          </div>
+        </div>
+
+        <!-- SECTION: PRIVACY & DIRECTORY PREFERENCES -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <div class="settings-icon" style="background:rgba(52,211,153,0.15); color:var(--green);">👁️</div>
+            <div>
+              <h3>Privacy & Visibility</h3>
+              <p>Control what information is visible to the network</p>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label">
+              <strong>Show Contact Info to Students</strong>
+              <span>Allow verified students to see your email & phone number on your card</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting_showContact" checked
+                onchange="SETTINGS.updatePreference('showContact', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label">
+              <strong>Allow Direct In-App Messages</strong>
+              <span>Permit peers and coordinators to send direct chat messages</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting_allowMessages" checked
+                onchange="SETTINGS.updatePreference('allowMessages', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- SECTION: NOTIFICATION PREFERENCES -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <div class="settings-icon" style="background:rgba(244,185,66,0.15); color:var(--gold);">🔔</div>
+            <div>
+              <h3>Notifications & Alerts</h3>
+              <p>Customize updates from opportunities and events notice board</p>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label">
+              <strong>Opportunities Hub Alerts</strong>
+              <span>Highlight new internship and job vacancies when published</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting_oppAlerts" checked
+                onchange="SETTINGS.updatePreference('oppAlerts', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label">
+              <strong>Event Notice Broadcasts</strong>
+              <span>Receive notification indicators for college meetups and seminars</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting_eventAlerts" checked
+                onchange="SETTINGS.updatePreference('eventAlerts', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- SECTION: HELP CENTER & CONTACT US -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <div class="settings-icon" style="background:rgba(96,165,250,0.15); color:#60a5fa;">💬</div>
+            <div>
+              <h3>Help & Support Desk</h3>
+              <p>Get assistance, read FAQs or reach college coordinators directly</p>
+            </div>
+          </div>
+
+          <div class="settings-row" style="cursor:pointer;" onclick="SETTINGS.openHelpModal()">
+            <div class="settings-label">
+              <strong>Frequently Asked Questions (FAQ)</strong>
+              <span>Learn how to update profile, apply for vacancies & connect</span>
+            </div>
+            <span style="color:var(--accent2); font-size:14px;">📖 View →</span>
+          </div>
+
+          <div class="settings-row" style="cursor:pointer;" onclick="SETTINGS.openContactModal()">
+            <div class="settings-label">
+              <strong>Contact Coordinator / Admin</strong>
+              <span>Send feedback, report technical issues or request profile verification</span>
+            </div>
+            <span style="color:var(--accent2); font-size:14px;">✉️ Write →</span>
+          </div>
+        </div>
+
+        <!-- SECTION: ABOUT & SESSION INFO -->
+        <div class="settings-card" style="text-align:center; padding:18px;">
+          <div style="font-size:24px; margin-bottom:6px;">🎓</div>
+          <h4 style="margin:0; font-size:15px; color:var(--text);">Mentor Mesh</h4>
+          <p style="font-size:12px; color:var(--muted); margin:4px 0 14px;">Smart Alumni Mentorship Platform · TCE Gadag</p>
+          <button class="btn-danger" style="margin:0; width:auto; padding:10px 24px; font-size:13px;"
+            onclick="AUTH.logout()">↩ Sign Out of Account</button>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-item active" id="nav-home" onclick="UI.showPage('home')">
+          <div class="nav-icon">🏠</div><span>Directory</span>
+        </div>
+        <div class="nav-item" id="nav-opps" onclick="UI.showPage('opps')" style="position:relative;">
+          <div class="nav-icon">💼</div><span>Opportunities Hub</span>
+          <div id="globalOppsBadge"
+            style="display:none; position: absolute; top: 2px; right: 8px; width: 8px; height: 8px; background: var(--green); border-radius: 50%;">
+          </div>
+        </div>
+        <div class="nav-item" id="nav-events" onclick="UI.showPage('events')" style="position:relative;">
+          <div class="nav-icon">📅</div><span>Events</span>
+          <div id="globalEventsBadge"></div>
+        </div>
+        <div class="nav-item" id="nav-inbox" onclick="UI.showPage('inbox')" style="position: relative;">
+          <div class="nav-icon">💬</div><span>Messages</span>
+          <div id="globalUnreadBadge"
+            style="display: none; position: absolute; top: -1px; right: 12px; background: var(--red); color: #fff; font-size: 9px; font-weight: bold; border-radius: 50%; min-width: 15px; height: 15px; align-items: center; justify-content: center; padding: 2px; font-family: 'DM Sans', sans-serif;">
+            0</div>
+        </div>
+        <div class="nav-item" id="nav-stats" onclick="UI.showPage('stats')">
+          <div class="nav-icon">📊</div><span>Stats</span>
+        </div>
+        <div class="nav-item" id="nav-add" onclick="UI.showPage('add')" style="display:none">
+          <div class="nav-icon">➕</div><span>Add</span>
+        </div>
+        <div class="nav-item" id="nav-profile" onclick="UI.showPage('profile')">
+          <div class="nav-icon">👤</div><span>Profile</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay" onclick="UI.closeModal(event)">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="chatOverlay" onclick="CHAT.closeBox(event)">
+    <div class="modal" style="max-height: 94vh; display: flex; flex-direction: column;">
+      <div class="modal-handle"></div>
+      <div class="page-header"
+        style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="back-btn" style="margin: 0; width:34px; height:34px; font-size:14px;"
+            onclick="CHAT.closeBox(event, true)">←</div>
+          <div>
+            <h2 id="chatParticipantName" style="font-size: 16px; margin:0; line-height:1.2;">Chatting...</h2>
+            <p id="chatParticipantStatus" style="font-size: 11px; color: var(--green); margin:2px 0 0;">Active Network
+              Connection</p>
+          </div>
+        </div>
+        <div class="back-btn" style="margin: 0; width:34px; height:34px; font-size:14px;"
+          onclick="CHAT.closeBox(event, true)">✕</div>
+      </div>
+      <div id="messageStream"
+        style="flex: 1; overflow-y: auto; padding: 10px 4px; display: flex; flex-direction: column; gap: 10px; min-height: 320px; max-height: 52vh;">
+      </div>
+
+      <!-- Quick Action Chips for Alumni & Coordinator Handshake -->
+      <div id="chatQuickChips" class="chat-quick-chips" style="display:none;">
+        <span class="chat-chip" onclick="CHAT.insertQuickTemplate('job')">💼 Job Vacancy Lead</span>
+        <span class="chat-chip" onclick="CHAT.insertQuickTemplate('internship')">🎓 Internship Lead</span>
+        <span class="chat-chip" onclick="CHAT.insertQuickTemplate('referral')">🤝 Alumni Referral</span>
+        <span class="chat-chip" onclick="CHAT.insertQuickTemplate('update')">📢 General Notice</span>
+      </div>
+
+      <div
+        style="display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); align-items:center;">
+        <div class="field" style="margin: 0; flex: 1;">
+          <input id="chatInput" type="text" placeholder="Type a message..."
+            onkeydown="if(event.key==='Enter') CHAT.sendMessage()" />
+        </div>
+        <button class="btn-primary" id="sendMsgBtn" onclick="CHAT.sendMessage()"
+          style="width: auto; margin: 0; padding: 12px 18px; border-radius:var(--radius-xs);">Send 🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW CHAT / USER SELECTOR MODAL -->
+  <div id="newChatModalOverlay" class="modal-overlay" onclick="if(event.target===this) CHAT.closeNewChatModal()">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="form-section" style="padding-top:0;">
+        <h2>✍️ Start New Message</h2>
+        <p class="subtitle">Chat with any student, alumni, or coordinator in the college network</p>
+
+        <div class="search-bar" style="margin-bottom:14px;">
+          <span style="color:var(--muted)">🔍</span>
+          <input id="newChatSearchInput" type="text" placeholder="Search by name, branch, roll number, company…"
+            oninput="CHAT.onNewChatSearch(this.value)" />
+        </div>
+
+        <div id="newChatUserList"
+          style="display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow-y:auto; padding-right:2px;">
+          <div class="empty">
+            <div class="icon">⏳</div>
+            <p>Loading directory members…</p>
+          </div>
+        </div>
+
+        <button class="btn-secondary" style="margin-top:14px;" onclick="CHAT.closeNewChatModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="eventModalOverlay" class="modal-overlay" onclick="if(event.target===this) EVENTS.closeEventModal()">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="form-section" style="padding-top:0;">
+        <h2 id="eventModalTitle">📢 Post New Event Notice</h2>
+        <p class="subtitle" id="eventModalSubtitle">Broadcast official announcements instantly to the college network
+          timeline</p>
+        <div class="field">
+          <label>Event Title / Subject *</label>
+          <input id="e_title" placeholder="e.g. Annual Alumni Meetup 2026">
+        </div>
+        <div class="field">
+          <label>Scheduled Date & Time</label>
+          <input id="e_date" placeholder="e.g. June 25th, 10:00 AM onwards">
+        </div>
+        <div class="field">
+          <label>Physical Venue or Virtual Link</label>
+          <input id="e_venue" placeholder="e.g. Auditorium Block-A / Zoom Link">
+        </div>
+        <div class="field">
+          <label>Notice Cover Image (Banner File)</label>
+          <input type="file" id="e_bannerFile" accept="image/*" style="padding:8px 0;"
+            onchange="EVENTS.previewUploadBanner(this)">
+          <div id="e_bannerPreviewContainer" style="display:none; position:relative; margin-top:8px;">
+            <img id="e_bannerPreviewImg" src=""
+              style="width:100%; max-height:160px; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--border);"
+              onclick="EVENTS.openLightbox(this.src)">
+            <div style="font-size:11px; color:var(--muted); margin-top:4px; text-align:center;">🔍 Click image preview
+              to enlarge</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Detailed Announcement Guidelines *</label>
+          <textarea id="e_desc"
+            placeholder="Provide clear specifications about the event timeline, registration details, or eligibility criteria..."
+            style="min-height:120px;"></textarea>
+        </div>
+        <button id="postEventBtn" class="btn-primary" style="margin-top:10px;" onclick="EVENTS.saveCollegeEvent()">📢
+          Post Event Announcement</button>
+        <button class="btn-secondary" onclick="EVENTS.closeEventModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENT IMAGE LIGHTBOX PREVIEW MODAL -->
+  <div id="imageLightboxOverlay" class="image-lightbox-overlay"
+    onclick="if(event.target===this) EVENTS.closeLightbox()">
+    <div class="image-lightbox-content">
+      <div class="image-lightbox-close" onclick="EVENTS.closeLightbox()">✕</div>
+      <img id="lightboxImg" src="" alt="Event Banner Preview">
+      <div id="lightboxCaption"
+        style="color:#e2e8f0; font-size:13px; margin-top:10px; text-align:center; font-weight:500;"></div>
+    </div>
+  </div>
+
+  <!-- OPPORTUNITY CREATION / EDIT MODAL (COORDINATOR ONLY) -->
+  <div id="oppModalOverlay" class="modal-overlay" onclick="if(event.target===this) OPPORTUNITIES.closeFormModal()">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="form-section" style="padding-top:0;">
+        <h2 id="oppModalTitle">✨ Post New Opportunity</h2>
+        <p class="subtitle" id="oppModalSubtitle">Publish an Internship or Job vacancy for students & alumni</p>
+
+        <div class="field">
+          <label>Opportunity Title / Role *</label>
+          <input id="opp_title" placeholder="e.g. Software Development Intern or Full Stack Engineer">
+        </div>
+
+        <div class="field">
+          <label>Opportunity Type *</label>
+          <select id="opp_type">
+            <option value="Internship">Internship 🎓</option>
+            <option value="Job">Job Vacancy 💼</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Company / Organization *</label>
+          <input id="opp_company" placeholder="e.g. Google, Microsoft, Infosys, Zomato">
+        </div>
+
+        <div class="field">
+          <label>Work Location & Mode</label>
+          <input id="opp_location" placeholder="e.g. Bengaluru (Hybrid), Remote, Pune">
+        </div>
+
+        <div class="field">
+          <label>Stipend / Salary Range</label>
+          <input id="opp_salary" placeholder="e.g. ₹35,000 / month or 8 - 14 LPA">
+        </div>
+
+        <div class="field">
+          <label>Application Deadline (Auto-expires on date end) *</label>
+          <input type="date" id="opp_deadline">
+          <div style="font-size:12px; margin-top:5px; color:var(--muted)">
+            ⏱️ Listing automatically deletes when the date ends.
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Application Link / Form URL *</label>
+          <input id="opp_applyUrl" type="url" placeholder="https://careers.company.com/... or Google Form link">
+        </div>
+
+        <div class="field">
+          <label>Target Eligibility / Batch</label>
+          <input id="opp_eligibility" placeholder="e.g. 2025 / 2026 Batch — CSE, ECE, IT (Min 7.0 CGPA)">
+        </div>
+
+        <div class="field">
+          <label>Experience Requirement</label>
+          <input id="opp_experience" placeholder="e.g. Fresher / 0-1 yr or Final Year Students">
+        </div>
+
+        <div class="field">
+          <label>Required Skills (comma-separated)</label>
+          <input id="opp_skills" placeholder="e.g. React, Node.js, Python, SQL">
+        </div>
+
+        <div class="field">
+          <label>Role Description & Specifications *</label>
+          <textarea id="opp_description"
+            placeholder="Specify key responsibilities, interview process, stipend perks, eligibility criteria..."
+            style="min-height:120px;"></textarea>
+        </div>
+
+        <button id="saveOppBtn" class="btn-primary" style="margin-top:10px;"
+          onclick="OPPORTUNITIES.saveOpportunity()">🚀 Publish Opportunity</button>
+        <button class="btn-secondary" onclick="OPPORTUNITIES.closeFormModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPPORTUNITY DETAIL & QUICK APPLY MODAL -->
+  <div id="oppDetailModalOverlay" class="modal-overlay"
+    onclick="if(event.target===this) OPPORTUNITIES.closeDetailModal()">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div id="oppDetailModalBody"></div>
+    </div>
+  </div>
+
+  <!-- ALUMNI SHARE OPPORTUNITY WITH COORDINATOR MODAL (ALUMNI EXCLUSIVE) -->
+  <div id="alumniShareOppModalOverlay" class="modal-overlay" onclick="if(event.target===this) OPPORTUNITIES.closeAlumniShareModal()">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="form-section" style="padding-top:0;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <span class="role-label alumni" style="font-size:11px; padding:3px 10px; margin:0;">Alumni Exclusive</span>
+        </div>
+        <h2>💼 Share Opportunity with Coordinator</h2>
+        <p class="subtitle">Submit job vacancies, internships & referrals directly to the College Placement Coordinator for verification and student publishing.</p>
+
+        <div class="field">
+          <label>Opportunity Type *</label>
+          <select id="alumni_opp_type">
+            <option value="Job">Job Vacancy 💼</option>
+            <option value="Internship">Internship 🎓</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Opportunity Title / Role *</label>
+          <input id="alumni_opp_title" placeholder="e.g. Associate Software Engineer or Data Analyst Intern">
+        </div>
+
+        <div class="field">
+          <label>Hiring Company / Organization *</label>
+          <input id="alumni_opp_company" placeholder="e.g. Microsoft, Google, TCS, Zomato">
+        </div>
+
+        <div class="field">
+          <label>Work Location & Mode</label>
+          <input id="alumni_opp_location" placeholder="e.g. Bengaluru (Hybrid), Remote, Hyderabad">
+        </div>
+
+        <div class="field">
+          <label>Salary / CTC or Monthly Stipend</label>
+          <input id="alumni_opp_salary" placeholder="e.g. ₹35,000 / month or 8 - 14 LPA">
+        </div>
+
+        <div class="field">
+          <label>Application Link / Referral URL / HR Email *</label>
+          <input id="alumni_opp_applyUrl" type="url" placeholder="https://careers.company.com/... or referral link">
+        </div>
+
+        <div class="field">
+          <label>Target Eligibility / Batch Criteria</label>
+          <input id="alumni_opp_eligibility" placeholder="e.g. 2025 / 2026 Batch — B.E / B.Tech (All Branches)">
+        </div>
+
+        <div class="field">
+          <label>Application Deadline (Optional)</label>
+          <input type="date" id="alumni_opp_deadline">
+        </div>
+
+        <div class="field">
+          <label>Key Skills / Tech Stack</label>
+          <input id="alumni_opp_skills" placeholder="e.g. Java, Python, SQL, React">
+        </div>
+
+        <div class="field">
+          <label>Role Summary & Requirements</label>
+          <textarea id="alumni_opp_description"
+            placeholder="Briefly describe the responsibilities, selection rounds, or perks..."
+            style="min-height:90px;"></textarea>
+        </div>
+
+        <div class="field" style="background:rgba(124,106,247,0.06); padding:12px; border-radius:var(--radius-xs); border:1px solid rgba(124,106,247,0.2);">
+          <label style="color:var(--accent2); font-weight:700;">💬 Personal Note for Placement Coordinator</label>
+          <textarea id="alumni_opp_notes"
+            placeholder="e.g. 'I can refer up to 5 candidates from our college directly to the hiring manager. Reach out to me for employee referral ID.'"
+            style="min-height:80px;"></textarea>
+          <div style="font-size:11px; color:var(--muted); margin-top:4px;">This note is sent directly to the Coordinator desk along with the lead.</div>
+        </div>
+
+        <button id="submitAlumniOppBtn" class="btn-primary" style="margin-top:12px;"
+          onclick="OPPORTUNITIES.submitAlumniOpportunity()">🚀 Send Opportunity to Coordinator</button>
+        <button class="btn-secondary" onclick="OPPORTUNITIES.closeAlumniShareModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HELP CENTER & FAQ MODAL -->
+  <div id="helpModalOverlay" class="modal-overlay" onclick="if(event.target===this) this.classList.remove('open')">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="form-section" style="padding-top:0;">
+        <h2>📖 Help Center & FAQ</h2>
+        <p class="subtitle">Quick answers to common questions about AlumniConnect</p>
+
+        <div class="faq-item">
+          <div class="faq-q">🎓 How do I update my profile and job status?</div>
+          <div class="faq-a">Navigate to the <b>Profile</b> tab in the bottom bar or tap your avatar at the top. You can
+            update your company, current status (Employed, Studying, etc.), CGPA, LinkedIn, and GitHub profile URL.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">💼 How do I apply for opportunities in the Hub?</div>
+          <div class="faq-a">Open the <b>Opportunities Hub</b> from the bottom navigation. Click any vacancy card to
+            read eligibility, salary/stipend, and deadline details. Click <b>"Apply Now"</b> to open the direct
+            application link.</div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">💬 Can I message alumni and coordinators directly?</div>
+          <div class="faq-a">Yes! Tap on any alumni or student in the Directory to view their card and tap <b>"Send
+              Direct Message"</b>, or tap <b>"✍️ New Chat"</b> in the Messages tab.</div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">🔒 How does 2-Factor Authentication protect my account?</div>
+          <div class="faq-a">Enabling 2FA in Settings enforces an additional email code verification handshake whenever
+            a login occurs from a new session or browser.</div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">🖼️ What image formats and sizes are supported?</div>
+          <div class="faq-a">You can upload JPG, PNG, or WEBP photos up to 150MB. Images are automatically optimized for
+            fast, crystal-clear loading.</div>
+        </div>
+
+        <button class="btn-primary" style="margin-top:14px;"
+          onclick="document.getElementById('helpModalOverlay').classList.remove('open')">Got it! Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTACT US / COORDINATOR DESK MODAL -->
+  <div id="contactModalOverlay" class="modal-overlay" onclick="if(event.target===this) this.classList.remove('open')">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="form-section" style="padding-top:0;">
+        <h2>✉️ Contact Coordinator & Support</h2>
+        <p class="subtitle">Reach out to college coordinators, report bugs or request help</p>
+
+        <div class="field">
+          <label>Subject / Topic *</label>
+          <select id="contact_subject">
+            <option value="General Inquiry">General Inquiry / Question</option>
+            <option value="Profile Correction">Profile Verification / Correction</option>
+            <option value="Opportunity Referral">Job / Internship Posting Request</option>
+            <option value="Technical Issue">Technical Bug / Issue Report</option>
+            <option value="Alumni Event Notice">Alumni Event / Meetup Proposal</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Your Message / Details *</label>
+          <textarea id="contact_message" placeholder="Please describe your query or feedback in detail..."
+            style="min-height:110px;"></textarea>
+        </div>
+
+        <div class="info-row"
+          style="margin:10px 0 16px; padding:10px; background:var(--surface2); border-radius:var(--radius-xs);">
+          <span class="key">Coordinator Desk</span>
+          <span class="val" style="color:var(--accent2); font-weight:600;">alumni.cell@college.edu</span>
+        </div>
+
+        <button class="btn-primary" id="sendContactBtn" onclick="SETTINGS.submitContactMessage()">🚀 Submit
+          Message</button>
+        <button class="btn-secondary"
+          onclick="document.getElementById('contactModalOverlay').classList.remove('open')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD MODAL -->
+  <div id="changePasswordModalOverlay" class="modal-overlay"
+    onclick="if(event.target===this) this.classList.remove('open')">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="form-section" style="padding-top:0;">
+        <h2>🔑 Security & Password Reset</h2>
+        <p class="subtitle">Send an official password reset link to your verified email</p>
+
+        <div
+          style="background:rgba(124,106,247,0.08); border:1px solid rgba(124,106,247,0.2); border-radius:12px; padding:14px; margin-bottom:16px;">
+          <p style="font-size:13px; color:var(--text); line-height:1.6; margin:0;">
+            A password reset link will be sent to your account email: <br>
+            <strong id="changePassUserEmail" style="color:var(--accent2);">your@email.com</strong>
+          </p>
+        </div>
+
+        <button class="btn-primary" id="sendPassResetBtn" onclick="SETTINGS.sendPasswordReset()">📧 Send Password Reset
+          Email</button>
+        <button class="btn-secondary"
+          onclick="document.getElementById('changePasswordModalOverlay').classList.remove('open')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/opportunities.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // Automatically open main app page directly without forcing login
+    document.addEventListener('DOMContentLoaded', () => {
+      AUTH.showApp();
+    });
+  </script>
+</body>
+
+</html>

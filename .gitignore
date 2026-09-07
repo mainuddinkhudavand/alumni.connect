@@ -1,0 +1,25 @@
+# Binaries & executables
+*.exe
+cloudflared.exe
+cflared.exe
+
+# Scripts
+start-phone-server.ps1
+
+# Firebase
+.firebaserc
+firebase.json
+.firebase/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+scratch/
+node_modules/
+
